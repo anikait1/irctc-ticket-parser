@@ -1,6 +1,7 @@
-from dataclasses import dataclass
 import datetime
 import os
+import pprint
+from dataclasses import dataclass
 
 from py_pdf_parser.loaders import load_file, PDFDocument
 
@@ -19,11 +20,11 @@ class Train:
 
 @dataclass
 class Ticket:
-    arrival: Station
     departure: Station
-    # pnr: int
-    # price: float
-    # train: Train
+    arrival: Station
+    pnr: int
+    price: float
+    train: Train | None = None
 
 
 def _parse_station(document: PDFDocument, station_key: str, timing_key: str):
@@ -43,12 +44,48 @@ def _parse_station(document: PDFDocument, station_key: str, timing_key: str):
     )
 
 
+def _parse_pnr(document: PDFDocument) -> int:
+    pnr_text_element = document.elements.filter_by_text_equal(
+        "PNR"
+    ).extract_single_element()
+    pnr = document.elements.below(pnr_text_element)[0].text()
+
+    return int(pnr)
+
+
+def _parse_final_price(document: PDFDocument) -> float:
+    total_fare_text_element = document.elements.filter_by_text_equal(
+        "Total Fare (all inclusive)"
+    ).extract_single_element()
+    price_text_label = (
+        document.elements.to_the_right_of(total_fare_text_element)
+        .extract_single_element()
+        .text()
+    )
+    _, price = price_text_label.split("₹")
+
+    return float(price.strip())
+
+
+def _parse_train(document: PDFDocument) -> Train:
+    train_info_label_element = document.elements.filter_by_text_equal(
+        "Train No./Name"
+    ).extract_single_element()
+    train_info = document.elements.below(train_info_label_element)[0].text()
+
+    number, name = train_info.split("/")
+    return Train(int(number.strip()), name.strip())
+
+
 def parse_ticket(document: PDFDocument) -> Ticket:
-    keys = (("Booked From:", "Departure"), ("To:", "Arrival"))
+    departure = _parse_station(document, "Booked From:", "Departure")
+    arrival = _parse_station(document, "To:", "Arrival")
+    pnr = _parse_pnr(document)
+    price = _parse_final_price(document)
+    train = _parse_train(document)
 
     return Ticket(
-        departure=_parse_station(document, keys[0][0], keys[0][1]),
-        arrival=_parse_station(document, keys[1][0], keys[1][1]),
+        departure=departure, arrival=arrival, pnr=pnr, price=price, train=train
     )
 
 
@@ -57,13 +94,9 @@ def main():
     path = os.path.join(os.getcwd(), filename)
     document = load_file(path)
 
-    print(parse_ticket(document))
+    pprint.pprint(parse_ticket(document))
 
 
 if __name__ == "__main__":
     main()
 
-
-# TODO(s)
-# parse PNR
-# train information
