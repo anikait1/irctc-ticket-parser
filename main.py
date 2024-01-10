@@ -1,4 +1,5 @@
 import datetime
+import argparse
 import os
 import pprint
 from dataclasses import dataclass
@@ -24,7 +25,15 @@ class Ticket:
     arrival: Station
     pnr: int
     price: float
-    train: Train | None = None
+    train: Train
+
+
+class CustomArgsNamespace:
+    directory: str | None = None
+    files: list[str] = list()
+
+    def __repr__(self) -> str:
+        return f"Dir({self.directory}) Files({self.files})"
 
 
 def _parse_station(document: PDFDocument, station_key: str, timing_key: str):
@@ -89,8 +98,27 @@ def parse_ticket(document: PDFDocument) -> Ticket:
     )
 
 
+def setup_command_line_args() -> CustomArgsNamespace:
+    parser = argparse.ArgumentParser()
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "-f", "--files", nargs="+", help="list of filenames to be parsed"
+    )
+    group.add_argument(
+        "-d", "--dir", help="directory containing list of files to be parsed"
+    )
+
+    args = parser.parse_args(namespace=CustomArgsNamespace())
+    pprint.pprint(args) # TODO - add logging instead of pprint
+
+    return args
+
+
 def main():
-    filename = "tickets/ndls-cdg(6th Jan).pdf"
+    args = setup_command_line_args()
+    # TODO - handle directory and files
+    filename = args.files[0]
     path = os.path.join(os.getcwd(), filename)
     document = load_file(path)
 
@@ -99,4 +127,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
