@@ -29,11 +29,11 @@ class Ticket:
 
 
 class CustomArgsNamespace:
-    directory: str | None = None
+    dir: str | None = None
     files: list[str] = list()
 
     def __repr__(self) -> str:
-        return f"Dir({self.directory}) Files({self.files})"
+        return f"Dir({self.dir}) Files({self.files})"
 
 
 def _parse_station(document: PDFDocument, station_key: str, timing_key: str):
@@ -109,20 +109,28 @@ def setup_command_line_args() -> CustomArgsNamespace:
         "-d", "--dir", help="directory containing list of files to be parsed"
     )
 
-    args = parser.parse_args(namespace=CustomArgsNamespace())
-    pprint.pprint(args) # TODO - add logging instead of pprint
+    args = CustomArgsNamespace()
+    args = parser.parse_args(namespace=args)
+    print(args.dir)
+    pprint.pprint(args)  # TODO - add logging instead of pprint
 
     return args
 
 
+def read_filenames_directory(directory: str, extension: str = ".pdf"):
+    return (
+        os.path.join(directory, filename)
+        for filename in os.listdir(directory)
+        if filename.endswith(extension)
+    )
+
+
 def main():
     args = setup_command_line_args()
-    # TODO - handle directory and files
-    filename = args.files[0]
-    path = os.path.join(os.getcwd(), filename)
-    document = load_file(path)
+    files = args.files if len(args.files) > 0 else read_filenames_directory(args.dir)
 
-    pprint.pprint(parse_ticket(document))
+    tickets = [parse_ticket(load_file(filename)) for filename in files]
+    pprint.pprint(tickets)
 
 
 if __name__ == "__main__":
