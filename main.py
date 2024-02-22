@@ -71,8 +71,10 @@ def _parse_final_price(document: PDFDocument) -> float:
         .extract_single_element()
         .text()
     )
-    _, price = price_text_label.split("₹")
 
+    price = (
+        price_text_label.split("₹")[-1] if "₹" in price_text_label else price_text_label
+    )
     return float(price.strip())
 
 
