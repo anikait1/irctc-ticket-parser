@@ -113,8 +113,6 @@ def setup_command_line_args() -> CustomArgsNamespace:
 
     args = CustomArgsNamespace()
     args = parser.parse_args(namespace=args)
-    print(args.dir)
-    pprint.pprint(args)  # TODO - add logging instead of pprint
 
     return args
 
